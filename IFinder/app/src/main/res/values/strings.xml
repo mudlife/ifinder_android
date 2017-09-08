@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">IFinder</string>
+    <string name="shouye">首页</string>
+    <string name="paizhao">拍照</string>
+    <string name="dingwei">定位</string>
+    <string name="jieshao">介绍</string>
 </resources>
