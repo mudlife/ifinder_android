@@ -8,11 +8,11 @@
     tools:context="com.example.mudlife.ifinder.MainActivity">
 
 
-    <fragment
-        android:id="@+id/bootm_fragment"
+    <FrameLayout
+        android:id="@+id/bootmNav"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="6"/>
+        android:layout_weight="8"/>
 
 
     <LinearLayout
@@ -29,22 +29,22 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
+                android:gravity="center"
                 android:orientation="vertical">
                 <ImageView
                     android:id="@+id/first_image"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
                     android:src="@mipmap/shouye"/>
                 <TextView
                     android:id="@+id/first_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:gravity="center"
                     android:layout_margin="5dp"
                     android:text="@string/shouye"
-                    android:textColor="#00ffee"/>
+                    android:textColor="@color/colorBootmNav"/>
             </LinearLayout>
         </RelativeLayout>
 
@@ -52,26 +52,27 @@
             android:id="@+id/second_layout"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:gravity="center"
             android:layout_weight="1">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
+                android:gravity="center"
                 android:orientation="vertical">
                 <ImageView
                     android:id="@+id/second_image"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
                     android:src="@mipmap/paizhao"/>
                 <TextView
                     android:id="@+id/second_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:gravity="center"
                     android:layout_margin="5dp"
                     android:text="@string/paizhao"
-                    android:textColor="#00ffee"/>
+                    android:textColor="@color/colorBootmNav"/>
             </LinearLayout>
         </RelativeLayout>
 
@@ -79,26 +80,27 @@
             android:id="@+id/third_layout"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:gravity="center"
             android:layout_weight="1">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
+                android:gravity="center"
                 android:orientation="vertical">
                 <ImageView
                     android:id="@+id/third_image"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
                     android:src="@mipmap/dingwei"/>
                 <TextView
                     android:id="@+id/third_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:gravity="center"
                     android:layout_margin="5dp"
                     android:text="@string/dingwei"
-                    android:textColor="#00ffee"/>
+                    android:textColor="@color/colorBootmNav"/>
             </LinearLayout>
         </RelativeLayout>
 
@@ -106,26 +108,27 @@
             android:id="@+id/fourth_layout"
             android:layout_width="0dp"
             android:layout_height="match_parent"
+            android:gravity="center"
             android:layout_weight="1">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_centerVertical="true"
+                android:gravity="center"
                 android:orientation="vertical">
                 <ImageView
                     android:id="@+id/fourth_image"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:layout_gravity="center"
                     android:src="@mipmap/jieshao"/>
                 <TextView
                     android:id="@+id/fourth_text"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_centerHorizontal="true"
+                    android:gravity="center"
                     android:layout_margin="5dp"
                     android:text="@string/jieshao"
-                    android:textColor="#00ffee"/>
+                    android:textColor="@color/colorBootmNav"/>
             </LinearLayout>
         </RelativeLayout>
     </LinearLayout>
