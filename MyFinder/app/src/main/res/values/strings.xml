@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">MyFinder</string>
+    <string name="ibeacon_name">iFinder設備</string>
+    <string name="ibeacon_add">添加</string>
+    <string name="shouye">首页</string>
+    <string name="paizhao">拍照</string>
+    <string name="dingwei">定位</string>
+    <string name="jieshao">介绍</string>
+    <string name="fanhui">返回</string>
+    <string name="sousuo">搜索设备</string>
+    <string name="fangdiu">防丢</string>
+    <string name="xunzhao">寻找</string>
+    <string name="shezhi">设置</string>
+    <string name="finder_statuse">设备状态</string>
+    <string name="delete">删除</string>
+</resources>
