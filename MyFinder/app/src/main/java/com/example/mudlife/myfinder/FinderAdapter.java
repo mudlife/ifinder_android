@@ -27,6 +27,9 @@ import com.example.mudlife.server.BleService;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by JX on 2017/9/13.
@@ -39,12 +42,18 @@ public class FinderAdapter extends BaseAdapter {
     private static float newx=(float)0.0;
     private static boolean isDown = false;
 
+    public static Lock finderLock;
+
+
+
     private static final String TAG = "FinderAdapter";
     private static final String[] statuses= new String[]{
           "无状态",
             "配对",
             "闲置",
-            "防丢中"
+            "防丢中",
+            "警報",
+            "防丟中"
     };
 
 
@@ -55,29 +64,84 @@ public class FinderAdapter extends BaseAdapter {
     public FinderAdapter(Context mContext) {
         this.mContext = mContext;
         if(finderDataHelp == null){
+
+            finderLock = new ReentrantLock();
+
             finderDataHelp = new FinderDataHelp(mContext);
 
             finderDataHelp.getFinders(myFinderList);
         }
 
 
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(true){
+
+                    for(iBeacon ibeacon:myFinderList){
+                        finderLock.lock();
+//                        Log.e(TAG,ibeacon.proximityUuid);
+                        if(ibeacon.tx == false)
+                            continue;
+
+                        //防丟
+                        if(ibeacon.fangdiu == true){
+
+                        }else{
+
+                        }
+                        Log.e(TAG,"THREAD");
+//
+                        Intent intent = new Intent();
+                        intent.setAction("com.example.mudlife.BleAdv");
+                        intent.putExtra("uuid",ibeacon.proximityUuid);
+                        intent.putExtra("major",ibeacon.send_major);
+
+                        intent.putExtra("minor",(short)0xFF00);
+                        sendBc(intent);
+
+
+                        //更新地图
+                        Intent mapIntent = new Intent();
+                        mapIntent.setAction("com.example.mudlife.BaiDuUpdate");
+                        sendBc(intent);
+                        finderLock.unlock();
+                        try {
+                            Thread.sleep(1000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+                }
+
+            }
+        });
+
+        thread.start();
     }
 
+    public void sendBc(Intent intent){
+        mContext.sendBroadcast(intent);
+    }
 
-    public void addFinder(iBeacon iBeacon){
+    public void addFinder(iBeacon ibeacon){
         //判断设备是否存在
 
 
         for(iBeacon ib:myFinderList){
-            if(ib.proximityUuid.equals(iBeacon.proximityUuid) == true){
+            if(ib.proximityUuid.equals(ibeacon.proximityUuid) == true){
                 return;
             }
 
         }
-            myFinderList.add(iBeacon);
-            finderDataHelp.insert(iBeacon);
+            ibeacon.setCmd((byte)0x01);//配對指令
+            ibeacon.send_minor = (short)0xFC03;//正確的返回結果
+            myFinderList.add(ibeacon);
+            finderDataHelp.insert(ibeacon);
             updateData();
-        Log.e(TAG,"addFinder");
+//        Log.e(TAG,"addFinder");
 
     }
 
@@ -89,6 +153,7 @@ public class FinderAdapter extends BaseAdapter {
     }
 
     public  void updateData() {
+
         notifyDataSetChanged();
     }
 
@@ -130,15 +195,16 @@ public class FinderAdapter extends BaseAdapter {
         holder.deleteLayout = (LinearLayout) view.findViewById(R.id.deleteLayout);
         holder.delete = (Button) view.findViewById(R.id.delete);
 
-        holder.finder_distance.setText("距离:"+myFinderList.get(position).distance+"m");
-        if(myFinderList.get(position).statuse<4)
+        holder.finder_distance.setText("距离:"+String.format("%.2f",myFinderList.get(position).distance)+"m");
+        if(myFinderList.get(position).statuse<6)
         holder.finder_statuse.setText("状态:"+statuses[myFinderList.get(position).statuse]);
+
 
 
         view.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.e(TAG,"onClick");
+//                Log.e(TAG,"onClick");
                 Intent intent = new Intent();
                 intent.setAction("com.example.mudlife.FinderActivity");
 
@@ -156,54 +222,69 @@ public class FinderAdapter extends BaseAdapter {
         holder.finder_fangdiu.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
                 Intent intent = new Intent();
+                Log.e(TAG,"防丟swicth adv");
                 intent.setAction("com.example.mudlife.BleAdv");
                 intent.putExtra("uuid",myFinderList.get(position).proximityUuid);
+
+                intent.putExtra("minor",(short)0xFF00);
                 if(isChecked){
                     //开启防丢
-                    myFinderList.get(position).statuse = iBeaconClass.FINDER_FANGDIU_ON;
-                    intent.putExtra("major",(short)0XFE01);
+                    myFinderList.get(position).setCmd((byte)0x01);
+                    myFinderList.get(position).send_minor = (short)0xFC03;
+                    myFinderList.get(position).fangdiu = true;
 
-                    intent.putExtra("minor",(short)0xFF00);
-                    mContext.sendBroadcast(intent);
                 }else{
                     //关闭防丢
-                    myFinderList.get(position).statuse = iBeaconClass.FINDER_FANGDIU_OFF;
-                    intent.putExtra("major",(short)0xFD02);
-                    intent.putExtra("minor",(short)0xFF00);
-                    mContext.sendBroadcast(intent);
+                    myFinderList.get(position).setCmd((byte)0x02);
+                    myFinderList.get(position).send_minor = (short)0xFD02;
+                    myFinderList.get(position).fangdiu = false;
+
+
                 }
+                myFinderList.get(position).tx = true;
+                intent.putExtra("major",myFinderList.get(position).major);
+                sendBc(intent);
+
             }
         });
 
         holder.finder_xunzhao.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+
                 Intent intent = new Intent();
+                Log.e(TAG,"尋找swicth adv");
                 intent.setAction("com.example.mudlife.BleAdv");
                 intent.putExtra("uuid",myFinderList.get(position).proximityUuid);
-                if(isChecked){
-                    //寻找
-                    myFinderList.get(position).statuse = iBeaconClass.FINDER_XUNZHAO_ON;
-                    intent.putExtra("major",(short)0xFB04);
-                    intent.putExtra("minor",(short)0xFF00);
 
-                        mContext.sendBroadcast(intent);
+                intent.putExtra("minor",(short)0xFF00);
+                if(isChecked){
+                    Log.e(TAG,"尋找");
+                    //寻找
+                    myFinderList.get(position).setCmd((byte)0x04);
+                    myFinderList.get(position).send_minor = (short)0xFB04;
+                    myFinderList.get(position).xunzhao = true;
+
                 }else{
                     //关闭
                     myFinderList.get(position).statuse = iBeaconClass.FINDER_XUNZHAO_OFF;
-                    intent.putExtra("major",(short)0xFF00);
-                    intent.putExtra("minor",(short)0xFF00);
+                    myFinderList.get(position).setCmd((byte)0x06);
+                    myFinderList.get(position).send_minor = (short)0xF906;
+                    myFinderList.get(position).xunzhao = false;
 
-                        mContext.sendBroadcast(intent);
                 }
+                myFinderList.get(position).tx = true;
+                intent.putExtra("major",myFinderList.get(position).major);
+                sendBc(intent);
             }
         });
 
 
 
 //        Log.e(TAG,"超出距离？"+myFinderList.get(position).distance);
-        if(Float.parseFloat(myFinderList.get(position).distance )> (float)1.0){
+        if(myFinderList.get(position).outDistance()){
 
             view.findViewById(R.id.finder_item).setBackgroundColor(Color.RED);
 

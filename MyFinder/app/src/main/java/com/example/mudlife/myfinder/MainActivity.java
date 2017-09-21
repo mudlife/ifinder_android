@@ -1,8 +1,12 @@
 package com.example.mudlife.myfinder;
 
 import android.Manifest;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -13,6 +17,7 @@ import android.view.View;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import com.example.mudlife.myfinder.iBeaconClass.iBeacon;
+import com.example.mudlife.server.BleService;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -23,6 +28,13 @@ public class MainActivity extends AppCompatActivity {
     private static final int BAIDUMAP=1;
     private static final int JIESHAO=2;
     private static final int LESCAN=3;
+
+    BleService bleService = null;
+    BleService.MyBinder myBinder = null;
+    MyServiceConn myServiceConn;
+    Intent bleIntent;
+    private static boolean bleServerFlag = false;
+
 
     ShouYeFragment shouYeFragment = null;
     BaiDuMapFragment baiDuMapFragment = null;
@@ -60,6 +72,18 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
+
+            /*开启蓝牙服务*/
+        bleIntent = new Intent(this, BleService.class);
+        bleIntent.setAction("android.intent.action.RESPOND_VIA_MESSAGE");
+        this.startService(bleIntent);
+
+
+
+
+        myServiceConn = new MyServiceConn();
+
+
         shouYeLayout = (RelativeLayout) findViewById(R.id.first_layout);
         paiZhaoLayout = (RelativeLayout) findViewById(R.id.second_layout);
         dingWeiLayout = (RelativeLayout) findViewById(R.id.third_layout);
@@ -73,12 +97,6 @@ public class MainActivity extends AppCompatActivity {
         if(shouYeFragment == null){
             shouYeFragment = new ShouYeFragment();
         }
-
-
-
-//        if(!shouYeFragment.isAdded()){
-//            getFragmentManager().beginTransaction().add(shouYeFragment,"shouye").commit();
-//        }
 
 
         getFragmentManager().beginTransaction().replace(R.id.bootmNav,shouYeFragment).commit();
@@ -134,9 +152,7 @@ public class MainActivity extends AppCompatActivity {
                     jieShaoFragment = new JieShaoFragment();
                 }
 
-//                if(!jieShaoFragment.isAdded()){
-//                    getFragmentManager().beginTransaction().add(jieShaoFragment,"jieshao").commit();
-//                }
+
 
                 getFragmentManager().beginTransaction().replace(R.id.bootmNav,jieShaoFragment).commit();
                 fragmentOldStatuse = fragmentCurentStatuse;
@@ -163,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 fanHuiTextView.setVisibility(View.GONE);
                 souSuoTextView.setText("搜索设备");
-                leScanFragment.bleUnBindService();
+
 
             }
         });
@@ -221,7 +237,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
+        bleBindService();
     }
 
     @Override
@@ -234,7 +250,46 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
 
         super.onDestroy();
+        bleUnBindService();
     }
 
+    public void bleBindService(){
+        if(bleServerFlag == false){
+            this.bindService(bleIntent,myServiceConn, Context.BIND_ABOVE_CLIENT);
+            bleServerFlag = true;
+        }
+
+    }
+
+    public void bleUnBindService(){
+        bleService.iBeacnStopLeSan();
+        if(bleServerFlag == true){
+            this.unbindService(myServiceConn);
+            bleServerFlag = false;
+        }
+
+    }
+
+
+    class  MyServiceConn implements ServiceConnection {
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            myBinder = (BleService.MyBinder) service;
+            bleService = myBinder.getService();
+
+
+
+            Log.e(TAG,"onServiceConnected");
+            bleService.iBeaconStartLeScan();
+
+
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+
+        }
+    }
 
 }

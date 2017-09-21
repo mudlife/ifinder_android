@@ -15,10 +15,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Vibrator;
 import android.support.annotation.Nullable;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -36,10 +36,7 @@ import java.util.TimerTask;
 public class BleService extends android.app.Service {
 
 
-    /*接口*/
-    public interface OnBleScanListener{
-        void onAddBeacon(String name,short major,short minor,String uuid,String addr,int power,int rssi,String distance);
-    }
+
 
 
     private static final String TAG = "BleService";
@@ -50,18 +47,16 @@ public class BleService extends android.app.Service {
     private BluetoothLeAdvertiser mBluetoothLeAdertiser;
     Timer timer=null;
 
-    private OnBleScanListener onBleScanListener;
 
 
-    BleReceiver bleReceiver=null;
+
+    static BleReceiver bleReceiver=null;
 
     private Vibrator vibrator;
 
     long[] pattern = {100,400,100,400};
 
-    public void setOnBleScanListener(OnBleScanListener onBleScanListener){
-        this.onBleScanListener = onBleScanListener;
-    }
+
 
     @Nullable
     @Override
@@ -83,19 +78,17 @@ public class BleService extends android.app.Service {
 
 
 
-
-
-
         //1.创建广播接收对象
-        bleReceiver = new BleReceiver();
+        if(bleReceiver == null) {
+            bleReceiver = new BleReceiver();
 
-        //2.创建internt-filter对象
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("com.example.mudlife.BleAdv");
+            //2.创建internt-filter对象
+            IntentFilter filter = new IntentFilter();
+            filter.addAction("com.example.mudlife.BleAdv");
 
-        //3.注册广播接收者
-        registerReceiver(bleReceiver,filter);
-
+            //3.注册广播接收者
+            registerReceiver(bleReceiver,filter);
+        }
         bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         mBluetoothAdapter = bluetoothManager.getAdapter();
 
@@ -120,6 +113,7 @@ public class BleService extends android.app.Service {
         //震动
         vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 
+//        iBeaconAdv("00000000-0000-0000-0000-000000000000", (short) 0xFF00, (short) 0xFF00);
 
     }
 
@@ -128,7 +122,8 @@ public class BleService extends android.app.Service {
      * iBeaon 掃描
      */
     public void iBeaconStartLeScan(){
-        Log.e(TAG,"iBeaconStartLeScan");
+
+//        Log.e(TAG,"掃描");
         if(bleLeScanFlag == false){
             mBluetoothAdapter.startLeScan(mLeScanCallback);
             bleLeScanFlag = true;
@@ -189,40 +184,75 @@ public class BleService extends android.app.Service {
                 Log.i(TAG,"distance"+ibeacon.distance);
 
                 for(iBeacon ib: FinderAdapter.myFinderList){
+
                     if(ib.proximityUuid.equals(ibeacon.proximityUuid) == true) {
+
+                        if(ib.send_minor == ibeacon.minor){
+                            Log.e(TAG,"send_minor:"+Integer.toHexString(ib.send_minor)+":"+Integer.toHexString(ibeacon.minor));
+                            mBluetoothLeAdertiser.stopAdvertising(mAdvertiseCallback);
+                            iBeaconStartLeScan();
+                            ib.tx = false;
+                        }
 
                         //更新距离
                         ib.distance = ibeacon.distance;
+                        ib.addDistance(ibeacon.distance);
+//                        ib.major = ibeacon.major;
+                        ib.minor = ibeacon.minor;
+                        ib.statuse = ibeacon.minor&0x0f;
 
                         Intent intent = new Intent();
                         intent.setAction("com.example.mudlife.FinderUpdata");
                         sendBroadcast(intent);
 
-                        if(Float.parseFloat(ibeacon.distance) > 1.0){//距离超出1m
 
-                            //震动
-                            vibrator.vibrate(pattern,2);
+                            if (ib.outDistance()) {//距离超出1m
 
-                            //蜂鸣器
-                            iBeaconAdv(ibeacon.proximityUuid,(short)0xFB04,(short)0xFF00);
+                                //震动
+                                vibrator.vibrate(pattern, 2);
+//                            Log.e(TAG,"setCmd 0x04");
+                                ib.tx = true;
+                                ib.setCmd((byte) 0x04);
+                                ib.send_minor = (short) 0xFB04;
+
+                                //蜂鸣器
+                                iBeaconAdv(ibeacon.proximityUuid, ibeacon.send_major, (short) 0xFF00);
+
+                            } else {
+                                vibrator.cancel();
+                                if(ibeacon.minor == (short)0xFB04){
+                                    ib.setCmd((byte) 0x06);
+                                    ib.send_minor = (short)0xF906;
+                                    ib.tx = true;
+//                                    iBeaconAdv(ib.proximityUuid, ib.send_major, ib.send_minor);
+                                }
+//                                if (ib.xunzhao == true) {
+//                                    ib.setCmd((byte) 0x04);
+//                                }
+//
+//                                ib.send_minor = (short) 0xFF00;
+//                                iBeaconAdv(ibeacon.proximityUuid, ibeacon.send_major, ibeacon.send_minor);
+
+                            }
+//
 
 
-                        }else{
-                            vibrator.cancel();
-                            iBeaconAdv(ibeacon.proximityUuid,(short)0xFF00,(short)0xFF00);
-                        }
-                        if ((ib.statuse == iBeaconClass.FINDER_FANGDIU_ON && ibeacon.statuse == iBeaconClass.FINDER_FANGDIU_ON) ||
-                                (ib.statuse == iBeaconClass.FINDER_FANGDIU_OFF && ibeacon.statuse == iBeaconClass.FINDER_IDLE) ) {
-                            Log.e(TAG,"状态："+ib.statuse+":"+ibeacon.statuse);
-                            iBeaconAdv(ib.proximityUuid, (short) 0xFF00, (short) 0xFF00);
-                            ib.statuse = iBeaconClass.FINDER_IDLE;
-                        }
-                        ib.statuse = ibeacon.statuse;
                         return;
                     }
                 }
-                onBleScanListener.onAddBeacon(ibeacon.name,ibeacon.major,ibeacon.minor,ibeacon.proximityUuid.toString(),
-                        ibeacon.bluetoothAddress.toString(),ibeacon.txPower,ibeacon.rssi,ibeacon.distance);
+
+                //发送广播 添加设备
+                Intent intent = new Intent();
+                intent.setAction("com.example.mudlife.iBeaconAdd");
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("ibeacon",ibeacon);
+
+                intent.putExtra("bundle",bundle);
+                sendBroadcast(intent);
+
+
+//                onBleScanListener.onAddBeacon(ibeacon.name,ibeacon.major,ibeacon.minor,ibeacon.proximityUuid.toString(),
+//                        ibeacon.bluetoothAddress.toString(),ibeacon.txPower,ibeacon.rssi,ibeacon.distance);
             }
 
         }
@@ -237,6 +267,8 @@ public class BleService extends android.app.Service {
     public void iBeaconAdv(String uuid,short major,short minor){
 
 
+
+        Log.e(TAG,"major:"+Integer.toHexString(major));
             mBluetoothLeAdertiser.stopAdvertising(mAdvertiseCallback);
             iBeacnStopLeSan();
             mBluetoothLeAdertiser.startAdvertising(createAdvSettings(true, 0), createAdvertiseData(uuid,major, minor, (byte) 0xC8), mAdvertiseCallback);
@@ -291,9 +323,9 @@ public class BleService extends android.app.Service {
         public void onStartSuccess(AdvertiseSettings settingsInEffect) {
             super.onStartSuccess(settingsInEffect);
             if(settingsInEffect != null){
-                Log.e(TAG,"onStartSuccess TxPowerLv=" + settingsInEffect.getTxPowerLevel() + "mode" + settingsInEffect.getMode());
+//                Log.e(TAG,"onStartSuccess TxPowerLv=" + settingsInEffect.getTxPowerLevel() + "mode" + settingsInEffect.getMode());
             }else{
-                Log.e(TAG,"onStartSuccess ,settingsInEffect is null");
+//                Log.e(TAG,"onStartSuccess ,settingsInEffect is null");
             }
 
 
@@ -301,11 +333,11 @@ public class BleService extends android.app.Service {
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
-//                    mBluetoothLeAdertiser.stopAdvertising(mAdvertiseCallback);
-
+                    mBluetoothLeAdertiser.stopAdvertising(mAdvertiseCallback);
                     iBeaconStartLeScan();
+
                 }
-            },3000);
+            },1000);
 
         }
 
@@ -313,7 +345,7 @@ public class BleService extends android.app.Service {
         public void onStartFailure(int errorCode) {
             super.onStartFailure(errorCode);
 
-            Log.e(TAG,"onStartFailure ");
+//            Log.e(TAG,"onStartFailure ");
         }
     };
 
@@ -328,12 +360,22 @@ public class BleService extends android.app.Service {
         public void onReceive(Context context, Intent intent) {
 
             if(intent.getAction().equals("com.example.mudlife.BleAdv")){
+                short major = intent.getShortExtra("major",(short)0xFF00);
+                short minor = intent.getShortExtra("minor",(short)0xFF00);
+
+//                Log.e(TAG,"BleReceiver "+Integer.toHexString(major)+":"+Integer.toHexString(minor));
+
+
+                if(major == (short)0xFF00){
+                    return;
+                }
+//                Log.e(TAG,"BleReceiver");
                 iBeaconAdv(intent.getStringExtra("uuid"),
-                        intent.getShortExtra("major",(short)0xFF00),
-                        intent.getShortExtra("mnor",(short)0xFF00));
+                        major,
+                        minor);
 
             }
-            Log.e(TAG,"BleReceiver");
+
         }
     }
 }

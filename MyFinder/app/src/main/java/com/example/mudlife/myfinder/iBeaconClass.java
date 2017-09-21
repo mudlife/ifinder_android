@@ -1,6 +1,12 @@
 package com.example.mudlife.myfinder;
 
 import android.bluetooth.BluetoothDevice;
+import android.util.Log;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 
 /**
  * Created by JX on 2017/9/12.
@@ -19,7 +25,7 @@ public class iBeaconClass {
      * @author cheny
      *
      */
-    static public class iBeacon {
+    static public class iBeacon implements Serializable{
 
 
         public String name;
@@ -29,9 +35,47 @@ public class iBeaconClass {
         public String bluetoothAddress;
         public int txPower;
         public int rssi;
-        public String distance;
+        public double distance;
+
+        public List<Double> distances;
 
         public int statuse;
+        public boolean xunzhao;
+        public boolean fangdiu;
+        public boolean xianzhi;
+
+        public boolean tx;
+
+        public short send_major;
+        public short send_minor;
+
+        public void setCmd(byte cmd){
+            byte seq = (byte)((send_major>>4) & 0x0f);
+            if(cmd == (byte)0x04 || cmd == (byte)0x01){
+                seq += 1;
+                if(seq>6) seq = 0;
+            }
+            seq = (byte) ((seq<<4)|cmd);
+//            Log.e("setCmd","cmd:"+bytesToHexString(new byte[]{(byte)(~seq),seq}));
+
+            send_major = (short)((byte)(~seq)<<8);
+            send_major |= seq;
+
+
+        }
+        public void addDistance(double d){
+            this.distances.remove(0);
+            this.distances.add(d);
+        }
+
+        public boolean outDistance(){
+
+            for(double d:this.distances){
+                if(d < 1.0)
+                    return false;
+            }
+            return true;
+        }
 
         public iBeacon(){
             this.name = "未知";
@@ -41,10 +85,21 @@ public class iBeaconClass {
             this.bluetoothAddress = "";
             this.txPower = 0xC8;
             this.rssi = 0;
-            this.distance = "0.0";
+            this.distance = 0.0;
             this.statuse = FINDER_IDLE;
+            this.xunzhao = false;
+            this.fangdiu = true;
+            this.xianzhi = true;
+            this.tx = true;
+            this.distances = new ArrayList<Double>();
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+
         }
-        public iBeacon(String name, short major, short minor, String proximityUuid, String bluetoothAddress, int txPower, int rssi, String distance) {
+        public iBeacon(String name, short major, short minor, String proximityUuid, String bluetoothAddress, int txPower, int rssi, double distance) {
 
             this.name = name;
             this.major = major;
@@ -61,6 +116,17 @@ public class iBeaconClass {
             }else if((this.minor &0x00FF) == FINDER_FANGDIU_ON){
                 statuse = FINDER_FANGDIU_ON;
             }
+            this.xunzhao = false;
+            this.fangdiu = true;
+            this.xianzhi = true;
+            this.tx = true;
+
+            this.distances = new ArrayList<Double>();
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
         }
 
         public iBeacon(iBeacon ibeacon){
@@ -80,6 +146,17 @@ public class iBeaconClass {
             }else if((this.minor &0x00FF) == FINDER_FANGDIU_ON){
                 statuse = FINDER_FANGDIU_ON;
             }
+            this.xunzhao = false;
+            this.fangdiu = true;
+            this.xianzhi = true;
+            this.tx = true;
+
+            this.distances = new ArrayList<Double>();
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
+            this.distances.add(0.0);
         }
 
         public boolean isPairStatuse(){
@@ -117,7 +194,7 @@ public class iBeaconClass {
                 iBeacon.minor = 0;
                 iBeacon.proximityUuid = "00000000-0000-0000-0000-000000000000";
                 iBeacon.txPower = -55;
-                iBeacon.distance = String.format("%.2f", calculateAccuracy(iBeacon.txPower, rssi));
+                iBeacon.distance = calculateAccuracy(iBeacon.txPower, rssi);
                 return iBeacon;
             } else if (((int) scanData[startByte] & 0xff) == 0xad && ((int) scanData[startByte + 1] & 0xff) == 0x77
                     && ((int) scanData[startByte + 2] & 0xff) == 0x00
@@ -128,7 +205,7 @@ public class iBeaconClass {
                 iBeacon.minor = 0;
                 iBeacon.proximityUuid = "00000000-0000-0000-0000-000000000000";
                 iBeacon.txPower = -55;
-                iBeacon.distance = String.format("%.2f", calculateAccuracy(iBeacon.txPower, rssi));
+                iBeacon.distance = calculateAccuracy(iBeacon.txPower, rssi);
                 return iBeacon;
             }
             startByte++;
@@ -168,7 +245,7 @@ public class iBeaconClass {
             iBeacon.bluetoothAddress = device.getAddress();
             iBeacon.name = device.getName();
         }
-        iBeacon.distance = String.format("%.2f", calculateAccuracy(iBeacon.txPower, rssi));
+        iBeacon.distance = calculateAccuracy(iBeacon.txPower, rssi);
 
         if((iBeacon.minor &0x00FF) == FINDER_IDLE){
             iBeacon.statuse = FINDER_IDLE;

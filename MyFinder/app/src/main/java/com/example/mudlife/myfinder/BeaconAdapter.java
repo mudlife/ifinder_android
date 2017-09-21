@@ -1,7 +1,10 @@
 package com.example.mudlife.myfinder;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,6 +27,7 @@ public class BeaconAdapter extends BaseAdapter {
     }
 
     private static final String TAG = "BeaconAdapter";
+    private static BeaconAdapterReceiver beaconAdapterReceiver=null;
     Context mContext;
 
     OnAddFinderListener onAddFinderListener=null;
@@ -35,13 +39,23 @@ public class BeaconAdapter extends BaseAdapter {
 
     public  BeaconAdapter(Context context){
         mContext = context;
+        //1.创建广播接收对象
+        beaconAdapterReceiver = new BeaconAdapterReceiver();
+
+        //2.创建internt-filter对象
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("com.example.mudlife.iBeaconAdd");
+
+        //3.注册广播接收者
+        mContext.registerReceiver(beaconAdapterReceiver,filter);
+
     }
-//
-//    public void binData(List<iBeacon> list){
-//        Log.e(TAG,"binData");
-//        iBeaconList = list;
-//
-//    }
+
+    public void destroy(){
+        mContext.unregisterReceiver(beaconAdapterReceiver);
+    }
+
+
     public void addData(iBeacon ibeacon){
         //判断设备是否存在
 //        Log.e(TAG,"添加");
@@ -56,7 +70,7 @@ public class BeaconAdapter extends BaseAdapter {
 
         }
         if(ibeacon.isPairStatuse() == true){
-            Log.e(TAG,"添加ibeacon");
+
             iBeaconList.add(ibeacon);
             updateData();
         }
@@ -110,6 +124,7 @@ public class BeaconAdapter extends BaseAdapter {
         holder.add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 onAddFinderListener.onAddFinder(iBeaconList.get(position));
                 iBeaconList.remove(position);
                 notifyDataSetChanged();
@@ -126,6 +141,18 @@ public class BeaconAdapter extends BaseAdapter {
         public TextView Rssi;
         public LinearLayout add;
     }
+
+
+    public class BeaconAdapterReceiver extends BroadcastReceiver{
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Bundle bundle = intent.getBundleExtra("bundle");
+            addData((iBeacon) bundle.get("ibeacon"));
+
+        }
+    }
+
 }
 
 

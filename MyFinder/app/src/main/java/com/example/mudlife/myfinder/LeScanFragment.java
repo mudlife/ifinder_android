@@ -35,13 +35,7 @@ public class LeScanFragment extends ListFragment {
     }
 
     private static final String TAG = "LeScanFragment";
-    private static boolean bleServerFlag = false;
-    MyServiceConn myServiceConn;
-    BleService.MyBinder myBinder = null;
 
-    BleService bleService = null;
-
-    private Intent bleIntent=null;
 
     BeaconAdapter beaconAdapter;
     private OnAddFinderListener onAddFinderListener;
@@ -62,8 +56,6 @@ public class LeScanFragment extends ListFragment {
         setListAdapter(beaconAdapter);
 
         beaconAdapter.updateData();
-        bleBindService();
-
 
         return v;
 
@@ -75,10 +67,6 @@ public class LeScanFragment extends ListFragment {
 
         super.onCreate(savedInstanceState);
 
-
-
-
-
         beaconAdapter = new BeaconAdapter(getActivity());
 
 //        beaconAdapter.addData(new iBeacon("钥匙",(short)0xFF00,(short)0xFF00,"BEAC1600-0000-0000-0000-112233aabbcc","112233aabbcc",0x8c,-59,"0.5"));
@@ -87,40 +75,12 @@ public class LeScanFragment extends ListFragment {
         beaconAdapter.setOnAddFinderListener(new BeaconAdapter.OnAddFinderListener() {
             @Override
             public void onAddFinder(iBeacon ibeacon) {
-                bleService.iBeaconAdv(ibeacon.proximityUuid,(short) 0xFC03,(short) 0XFF00);
+//                bleService.iBeaconAdv(ibeacon.proximityUuid,(short) 0xFC03,(short) 0XFF00);
 
                 Log.e(TAG,"setOnAddFinderListener");
                 onAddFinderListener.onAddFinder(ibeacon);
             }
         });
-
-
-          /*开启蓝牙服务*/
-        bleIntent = new Intent(getActivity(), BleService.class);
-        bleIntent.setAction("android.intent.action.RESPOND_VIA_MESSAGE");
-        getActivity().startService(bleIntent);
-
-        myServiceConn = new MyServiceConn();
-
-
-
-    }
-
-
-    public void bleBindService(){
-        if(bleServerFlag == false){
-            getActivity().bindService(bleIntent,myServiceConn, Context.BIND_ABOVE_CLIENT);
-            bleServerFlag = true;
-        }
-
-    }
-
-    public void bleUnBindService(){
-        bleService.iBeacnStopLeSan();
-        if(bleServerFlag == true){
-            getActivity().unbindService(myServiceConn);
-            bleServerFlag = false;
-        }
 
     }
 
@@ -133,36 +93,11 @@ public class LeScanFragment extends ListFragment {
     @Override
     public void onDestroy() {
         Log.e(TAG,"onDestroy");
-        bleUnBindService();
+
+        beaconAdapter.destroy();
 
         super.onDestroy();
     }
 
-    class  MyServiceConn implements ServiceConnection {
 
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            myBinder = (BleService.MyBinder) service;
-            bleService = myBinder.getService();
-
-            Log.e(TAG,"onServiceConnected");
-            bleService.iBeaconStartLeScan();
-
-
-            bleService.setOnBleScanListener(new BleService.OnBleScanListener() {
-                @Override
-                public void onAddBeacon(String name,short major,short minor,String uuid,String addr,int power,int rssi,String distance) {
-
-                    beaconAdapter.addData(new iBeacon(name,major,minor, uuid, addr, power,rssi,distance));
-
-                }
-            });
-
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-
-        }
-    }
 }

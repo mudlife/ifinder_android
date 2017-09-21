@@ -2,13 +2,18 @@ package com.example.mudlife.myfinder;
 
 import android.Manifest;
 import android.app.Fragment;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.BlockedNumberContract;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
@@ -18,16 +23,25 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+
 import com.baidu.mapapi.BMapManager;
 import com.baidu.mapapi.SDKInitializer;
+import com.baidu.mapapi.map.ArcOptions;
 import com.baidu.mapapi.map.BaiduMap;
+import com.baidu.mapapi.map.BitmapDescriptor;
+import com.baidu.mapapi.map.BitmapDescriptorFactory;
+import com.baidu.mapapi.map.CircleOptions;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
+import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.map.OverlayOptions;
+import com.baidu.mapapi.map.Stroke;
 import com.baidu.mapapi.model.LatLng;
+
+import com.example.mudlife.myfinder.iBeaconClass.iBeacon;
 
 import java.util.List;
 
@@ -43,7 +57,8 @@ public class BaiDuMapFragment extends Fragment {
     private String provider;
     boolean ifFrist = true;
     private OverlayOptions overlayOptions = null;
-    private  LatLng latLng = null;
+    private LatLng latLng = null;
+    BaiDuMapReceiver baiDuMapReceiver;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Nullable
@@ -56,6 +71,7 @@ public class BaiDuMapFragment extends Fragment {
 
         mapView = (MapView) view.findViewById(R.id.bmapView);
         baiduMap = mapView.getMap();
+
 //        baiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
         baiduMap.setMyLocationEnabled(true);
         locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
@@ -78,8 +94,8 @@ public class BaiDuMapFragment extends Fragment {
         if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
             //    ActivityCompat#requestPermissions
-            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION},1);
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION},1);
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             // here to request the missing permissions, and then overriding
             //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
             //                                          int[] grantResults)
@@ -90,47 +106,64 @@ public class BaiDuMapFragment extends Fragment {
             Log.e("BaiDuMapFragment", "getLastKnownLocation");
             return view;
         }
+//        addOverlay(FinderAdapter.myFinderList);
         Location location = locationManager.getLastKnownLocation(provider); //locationManager.getLastKnownLocation(provider);
         if (location != null) {
             navigateTo(location);
         }
-        locationManager.requestLocationUpdates(provider, 5000, 1,locationListener);
+        locationManager.requestLocationUpdates(provider, 1000, 10, locationListener);
 
 
-        Log.e("BaiDuMapFragment","onCreateView");
+        Log.e("BaiDuMapFragment", "onCreateView");
         return view;
     }
-    public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
+
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 1) {
-            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 //your implementations
-            }else{
-                Log.e("error","權限");
+            } else {
+                Log.e("error", "權限");
             }
         }
 
     }
+
     private void navigateTo(Location location) {
 
+        OverlayOptions options;
+
+        baiduMap.clear();
         // 按照经纬度确定地图位置
-        if (ifFrist) {
-            latLng = new LatLng(location.getLatitude(),
-                    location.getLongitude());
-//            overlayOptions = new MarkerOptions().position(latLng);
-            latLng = new LatLng(location.getLatitude()+0.1,
-                    location.getLongitude()+0.1);
-            MapStatusUpdate update = MapStatusUpdateFactory.newLatLng(latLng);
-            // 移动到某经纬度
-            baiduMap.animateMapStatus(update);
-            update = MapStatusUpdateFactory.zoomBy(5f);
-            // 放大
-            baiduMap.animateMapStatus(update);
+//        if (ifFrist) {
 
+        for (iBeacon ibeacon : FinderAdapter.myFinderList) {
 
+            Log.e("BaiDu distance:",""+ibeacon.distance);
+            options = new CircleOptions()
+                    .center(new LatLng(location.getLatitude(), location.getLongitude()))
+                    .zIndex(9)
+                    .radius((int) ibeacon.distance * 20)
+                    .fillColor(Color.argb(0, 255, 0, 0))
+                    .stroke(new Stroke(3, 0xAA00FF00));
 
-            ifFrist = false;
+            baiduMap.addOverlay(options);
         }
+        Log.e("BaiDuMap", "la:" + location.getLatitude() + "Lo:" + location.getLongitude());
+        latLng = new LatLng(location.getLatitude(),
+                location.getLongitude());
+        MapStatusUpdate update = MapStatusUpdateFactory.newLatLng(latLng);
+        // 移动到某经纬度
+        baiduMap.animateMapStatus(update);
+        update = MapStatusUpdateFactory.zoomBy(5f);
+        // 放大
+        baiduMap.animateMapStatus(update);
+
+
+//            ifFrist = false;
+//        }
+//        Log.e("BaiDuMap","la:"+location.getLatitude()+"Lo:"+location.getLongitude());
         // 显示个人位置图标
         MyLocationData.Builder builder = new MyLocationData.Builder();
         builder.latitude(location.getLatitude());
@@ -168,5 +201,87 @@ public class BaiDuMapFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        //1.创建广播接收对象
+        baiDuMapReceiver = new BaiDuMapReceiver();
+
+        //2.创建internt-filter对象
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("com.example.mudlife.BaiDuUpdate");
+
+        //3.注册广播接收者
+        getActivity().registerReceiver(baiDuMapReceiver, filter);
+
     }
+
+
+    private void addOverlay(List<iBeacon> list) {
+        Log.e("BaiDuMap", "addOverlay");
+        baiduMap.clear();
+        BitmapDescriptor bitmap = BitmapDescriptorFactory.fromResource(R.mipmap.tubiao);
+        LatLng latLng = null;
+        Marker marker;
+        OverlayOptions options;
+        iBeacon ibeacon = new iBeaconClass.iBeacon("钥匙", (short) 0xFF00, (short) 0xFF00, "BEAC1600-0000-0000-0000-112233445566",
+                "112233445566", 0x8C, -59, 0.5);
+//        for(iBeacon ibeacon:list){
+        latLng = new LatLng(31.050659, 121.156179);
+        options = new MarkerOptions()
+                .position(latLng)
+                .icon(bitmap)
+                .zIndex(9)
+                .draggable(true);
+        marker = (Marker) baiduMap.addOverlay(options);
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("ibeacon", ibeacon);
+        marker.setExtraInfo(bundle);
+//        }
+        MapStatusUpdate msu = MapStatusUpdateFactory.newLatLng(latLng);
+        baiduMap.setMapStatus(msu);
+
+    }
+
+
+    public class BaiDuMapReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            Location location = locationManager.getLastKnownLocation(provider); //locationManager.getLastKnownLocation(provider);
+            if (location != null) {
+                navigateTo(location);
+            }
+        }
+    }
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
