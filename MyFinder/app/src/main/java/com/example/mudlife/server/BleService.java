@@ -123,7 +123,7 @@ public class BleService extends android.app.Service {
      */
     public void iBeaconStartLeScan(){
 
-//        Log.e(TAG,"掃描");
+        Log.e(TAG,"掃描");
         if(bleLeScanFlag == false){
             mBluetoothAdapter.startLeScan(mLeScanCallback);
             bleLeScanFlag = true;
@@ -135,6 +135,7 @@ public class BleService extends android.app.Service {
 
 
     public  void iBeacnStopLeSan(){
+        Log.e(TAG,"停止掃描");
         if(bleLeScanFlag == true){
             mBluetoothAdapter.stopLeScan(mLeScanCallback);
             bleLeScanFlag = false;
@@ -170,8 +171,10 @@ public class BleService extends android.app.Service {
         public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
 
 
+
             final iBeacon ibeacon = iBeaconClass.fromScanData(device, rssi, scanRecord);
 
+//            Log.e(TAG,"有数据");
 //            onBleScanListener.onAddBeacon(ibeacon);
 
             if(ibeacon !=null) {
@@ -220,11 +223,11 @@ public class BleService extends android.app.Service {
 
                             } else {
                                 vibrator.cancel();
-                                if(ibeacon.minor == (short)0xFB04){
+                                if(ibeacon.minor == (short)0xFB04 && ib.xunzhao == false){
                                     ib.setCmd((byte) 0x06);
                                     ib.send_minor = (short)0xF906;
                                     ib.tx = true;
-//                                    iBeaconAdv(ib.proximityUuid, ib.send_major, ib.send_minor);
+                                    iBeaconAdv(ib.proximityUuid, ib.send_major, ib.minor);
                                 }
 //                                if (ib.xunzhao == true) {
 //                                    ib.setCmd((byte) 0x04);
@@ -334,6 +337,7 @@ public class BleService extends android.app.Service {
                 @Override
                 public void run() {
                     mBluetoothLeAdertiser.stopAdvertising(mAdvertiseCallback);
+                    Log.e(TAG,"开始扫描");
                     iBeaconStartLeScan();
 
                 }

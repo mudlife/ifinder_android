@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -39,6 +40,9 @@ public class PaiZhaoActivity extends AppCompatActivity{
     private ImageView camearImage;
     private String sdPath;
     private String picPath;
+
+    private Camera mCamera;
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -75,6 +79,7 @@ public class PaiZhaoActivity extends AppCompatActivity{
             Log.e("BaiDuMapFragment", "getLastKnownLocation");
 
         }
+
 
         Intent intent1 = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         startActivityForResult(intent1,REQUEST_THUMBNAIL);

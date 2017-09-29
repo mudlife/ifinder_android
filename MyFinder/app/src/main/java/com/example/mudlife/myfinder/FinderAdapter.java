@@ -107,7 +107,7 @@ public class FinderAdapter extends BaseAdapter {
                         sendBc(intent);
                         finderLock.unlock();
                         try {
-                            Thread.sleep(1000);
+                            Thread.sleep(5000);
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
